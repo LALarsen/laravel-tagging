@@ -33,6 +33,22 @@ class Util implements TaggingUtility
 
 		return array_values($tagNames);
 	}
+	
+	/**
+	 * Converts input into array
+	 *
+	 * @param $tagName string or array
+	 * @return array
+	 */
+	public function makeTagIdArray($tagNames)
+	{
+		$tagSlugs = array_map(function($item){
+			return static::slug($item);
+		}, $this->makeTagArray($tagNames));
+		$model = $this->tagModelString();
+		
+		return $model::whereIn('slug', $tagSlugs)->get('id')->pluck('id');
+	}
 
 	/**
 	 * Create a web friendly URL slug from a string.
@@ -153,41 +169,35 @@ class Util implements TaggingUtility
 	
 	/**
 	 * Private! Please do not call this function directly, just let the Tag library use it.
-	 * Increment count of tag by one. This function will create tag record if it does not exist.
+	 * Increment count of tag by one.
 	 *
-	 * @param string $tagString
+	 * @param integer $tagId
 	 */
-	public function incrementCount($tagString, $tagSlug, $count)
+	public function incrementCount($tagId, $count)
 	{
 		if($count <= 0) { return; }
 		$model = $this->tagModelString();
 		
-		$tag = $model::where('slug', '=', $tagSlug)->first();
+		$tag = $model::withTranslation()->find($tagId);
 
-		if(!$tag) {
-			$tag = new $model;
-			$tag->name = $tagString;
-			$tag->slug = $tagSlug;
-			$tag->suggest = false;
+		if($tag) {
+			$tag->count = $tag->count + $count;
 			$tag->save();
 		}
-		
-		$tag->count = $tag->count + $count;
-		$tag->save();
 	}
 	
 	/**
 	 * Private! Please do not call this function directly, let the Tag library use it.
-	 * Decrement count of tag by one. This function will create tag record if it does not exist.
+	 * Decrement count of tag by one.
 	 *
-	 * @param string $tagString
+	 * @param integer $tagId
 	 */
-	public function decrementCount($tagString, $tagSlug, $count)
+	public function decrementCount($tagId, $count)
 	{
 		if($count <= 0) { return; }
 		$model = $this->tagModelString();
 		
-		$tag = $model::where('slug', '=', $tagSlug)->first();
+		$tag = $model::withTranslation()->find($tagId);
 	
 		if($tag) {
 			$tag->count = $tag->count - $count;

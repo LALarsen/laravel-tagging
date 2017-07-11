@@ -9,8 +9,12 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 class Tag extends Eloquent
 {
     use ConnectionTrait;
-
-    protected $table = 'tagging_tags';
+	use \Dimsav\Translatable\Translatable;
+	
+    public $translatedAttributes = ['name', 'slug'];
+	protected $translationForeignKey = 'tag_id';
+	
+	protected $table = 'tagging_tags';
     public $timestamps = false;
     protected $softDelete = false;
     public $fillable = ['name'];

@@ -33,19 +33,19 @@ interface TaggingUtility
 		
 	/**
 	 * Private! Please do not call this function directly, just let the Tag library use it.
-	 * Increment count of tag by one. This function will create tag record if it does not exist.
+	 * Increment count of tag by one.
 	 *
-	 * @param string $tagString
+	 * @param integer $tagId
 	 */
-	public function incrementCount($tagString, $tagSlug, $count);
+	public function incrementCount($tagId, $count);
 	
 	/**
 	 * Private! Please do not call this function directly, let the Tag library use it.
-	 * Decrement count of tag by one. This function will create tag record if it does not exist.
+	 * Decrement count of tag by one.
 	 *
-	 * @param string $tagString
+	 * @param integer $tagId
 	 */
-	public function decrementCount($tagString, $tagSlug, $count);
+	public function decrementCount($tagId, $count);
 	
 	/**
 	 * Look at the tags table and delete any tags that are no londer in use by any taggable database rows.
