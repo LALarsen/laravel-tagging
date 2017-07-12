@@ -168,48 +168,6 @@ class Util implements TaggingUtility
 	}
 	
 	/**
-	 * Private! Please do not call this function directly, just let the Tag library use it.
-	 * Increment count of tag by one.
-	 *
-	 * @param integer $tagId
-	 */
-	public function incrementCount($tagId, $count)
-	{
-		if($count <= 0) { return; }
-		$model = $this->tagModelString();
-		
-		$tag = $model::withTranslation()->find($tagId);
-
-		if($tag) {
-			$tag->count = $tag->count + $count;
-			$tag->save();
-		}
-	}
-	
-	/**
-	 * Private! Please do not call this function directly, let the Tag library use it.
-	 * Decrement count of tag by one.
-	 *
-	 * @param integer $tagId
-	 */
-	public function decrementCount($tagId, $count)
-	{
-		if($count <= 0) { return; }
-		$model = $this->tagModelString();
-		
-		$tag = $model::withTranslation()->find($tagId);
-	
-		if($tag) {
-			$tag->count = $tag->count - $count;
-			if($tag->count < 0) {
-				$tag->count = 0;
-				\Log::warning("The '.$model.' count for `$tag->name` was a negative number. This probably means your data got corrupted. Please assess your code and report an issue if you find one.");
-			}
-			$tag->save();
-		}
-	}
-	
-	/**
 	 * Look at the tags table and delete any tags that are no londer in use by any taggable database rows.
 	 * Does not delete tags where 'suggest' is true
 	 *
@@ -227,5 +185,13 @@ class Util implements TaggingUtility
 	public function tagModelString()
 	{
 		return config('tagging.tag_model', '\Conner\Tagging\Model\Tag');
+	}
+
+	/**
+	 * @return string
+	 */
+	public function taggedModelString()
+	{
+		return config('tagging.tagged_model', '\Conner\Tagging\Model\Tagged');
 	}
 }

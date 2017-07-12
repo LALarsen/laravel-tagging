@@ -1,7 +1,7 @@
 <?php namespace Conner\Tagging\Contracts;
 
 /**
- * Intergace of utility functions to help with various tagging functionality.
+ * Interface of utility functions to help with various tagging functionality.
  *
  * @author Rob Conner <rtconner+gh@gmail.com>
  *
@@ -31,22 +31,6 @@ interface TaggingUtility
 	 */
 	public static function slug($str);
 		
-	/**
-	 * Private! Please do not call this function directly, just let the Tag library use it.
-	 * Increment count of tag by one.
-	 *
-	 * @param integer $tagId
-	 */
-	public function incrementCount($tagId, $count);
-	
-	/**
-	 * Private! Please do not call this function directly, let the Tag library use it.
-	 * Decrement count of tag by one.
-	 *
-	 * @param integer $tagId
-	 */
-	public function decrementCount($tagId, $count);
-	
 	/**
 	 * Look at the tags table and delete any tags that are no londer in use by any taggable database rows.
 	 * Does not delete tags where 'suggest' is true

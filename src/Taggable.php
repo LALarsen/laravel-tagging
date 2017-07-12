@@ -288,17 +288,12 @@ trait Taggable
 			$tag->slug = $tagSlug;
 			$tag->suggest = false;
 			$tag->save();
-		} else {
-			$previousCount = $this->tagged()->where('tag_id', '=', $tag->id)->take(1)->count();
-			if($previousCount >= 1) { return; }
 		}
 		
 		$tagged = new Tagged(['tag_id' => $tag->id]);
 		
 		$this->tagged()->save($tagged);
 
-		static::$taggingUtility->incrementCount($tag->id, 1);
-		
 		unset($this->relations['tagged']);
 		event(new TagAdded($this));
 	}
@@ -310,9 +305,7 @@ trait Taggable
 	 */
 	private function removeTag($tagId)
 	{
-		if($count = $this->tagged()->where('tag_id', '=', $tagId)->delete()) {
-			static::$taggingUtility->decrementCount($tagId, $count);
-		}
+		$this->tagged()->where('tag_id', '=', $tagId)->delete();
 		
 		unset($this->relations['tagged']);
 		event(new TagRemoved($this));
@@ -323,21 +316,21 @@ trait Taggable
 	 *
 	 * @return Collection
 	 */
-	public static function existingTags()
+	/*public static function existingTags()
 	{
 		return Tagged::distinct()
-			->join('tagging_tags', 'tag_slug', '=', 'tagging_tags.slug')
+			->join('tagging_tags', 'tag_id', '=', 'tagging_tags.id')
 			->where('taggable_type', '=', (new static)->getMorphClass())
 			->orderBy('tag_slug', 'ASC')
 			->get(array('tag_slug as slug', 'tag_name as name', 'tagging_tags.count as count'));
-	}
+	}*/
 
 	/**
      	* Return an array of all of the tags that are in use by this model
       	* @param $groups Array with groups names
      	* @return Collection
  	*/
- 	public static function existingTagsInGroups(Array $groups)
+ 	/*public static function existingTagsInGroups(Array $groups)
  	{
  		return Tagged::distinct()
  			->join('tagging_tags', 'tag_slug', '=', 'tagging_tags.slug')
@@ -346,7 +339,7 @@ trait Taggable
  			->whereIn('tagging_tag_groups.name',$groups)
  			->orderBy('tag_slug', 'ASC')
 			->get(array('tag_slug as slug', 'tag_name as name', 'tagging_tags.count as count'));
- 	}
+ 	}*/
  	
 	
 	/**

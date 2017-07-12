@@ -32,6 +32,17 @@ class Tag extends Eloquent
     }
 
     /**
+     * Get instances of tagged linked to the tag
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function tagged()
+    {
+        $model = $this->taggingUtility->taggedModelString();
+        return $this->hasMany($model);
+    }
+	
+	/**
      * (non-PHPdoc)
      * @see \Illuminate\Database\Eloquent\Model::save()
      */
@@ -140,16 +151,16 @@ class Tag extends Eloquent
     }
 
     /**
-     * Look at the tags table and delete any tags that are no londer in use by any taggable database rows.
-     * Does not delete tags where 'suggest'value is true
+     * Look at the tags table and delete any tags that are no longer in use by any tagable database rows.
+     * Does not delete tags where 'suggest' value is true
      *
      * @return int
      */
     public static function deleteUnused()
     {
-        return (new static )->newQuery()
-            ->where('count', '=', 0)
-            ->where('suggest', false)
+        return (new static)
+			->doesntHave('tagged')
+			->where('suggest', false)
             ->delete();
     }
 }
