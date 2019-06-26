@@ -5,7 +5,10 @@ namespace Conner\Tagging;
 use Conner\Tagging\Contracts\TaggingUtility;
 use Conner\Tagging\Events\TagAdded;
 use Conner\Tagging\Events\TagRemoved;
+use Conner\Tagging\Model\Tag;
 use Conner\Tagging\Model\Tagged;
+use Conner\Tagging\Model\TagGroup;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -55,11 +58,19 @@ trait Taggable
 	/**
 	 * Return collection of tagged rows related to the tagged model
 	 *
+	 * @param string	$groupName	Name of tag group
 	 * @return Illuminate\Database\Eloquent\Collection
 	 */
-	public function tagged()
+	public function tagged($groupName = null)
 	{
-		return $this->morphMany(config('tagging.tagged_model', 'Conner\Tagging\Model\Tagged'), 'taggable')->with('tag.translations');
+		$query = $this->morphMany(config('tagging.tagged_model', 'Conner\Tagging\Model\Tagged'), 'taggable');
+		if ($groupName) {
+			$groupSlug = static::$taggingUtility->slug($groupName);
+			$query->whereHas('tag.group', function (Builder $builder) use ($groupSlug) {
+				$builder->where('slug', $groupSlug);
+			});
+		}
+		return $query->with('tag.translations')->orderBy('sorting');
 	}
 
 	/**
@@ -90,24 +101,72 @@ trait Taggable
 	 * Perform the action of tagging the model with the given string
 	 *
 	 * @param $tagName string or array
+	 * @param string	$groupName	Name of tag group
+	 * @param boolean	$useSorting	Populate the sorting column?
 	 */
-	public function tag($tagNames)
+	public function tag($tagNames, $groupName = null, $useSorting = false)
 	{
 		$tagNames = static::$taggingUtility->makeTagArray($tagNames);
 		
+		if ($useSorting) {
+			$sort = count($this->tagIds());
+		} else {
+			$sort = 0;
+		}
 		foreach($tagNames as $tagName) {
-			$this->addTag($tagName);
+			$this->addTag($tagName, $groupName, ($useSorting ? $sort : null));
+			$sort++;
+		}
+	}
+	
+	/**
+	 * Perform the action of tagging the model with the given string
+	 *
+	 * @param $tagName string or array
+	 * @param boolean	$useSorting	Populate the sorting column?
+	 */
+	public function tagWithId($ids, $useSorting = false)
+	{
+		if (!is_array($ids)) {
+			$ids = [$ids];
+		}
+		$model = static::$taggingUtility->tagModelString();
+		
+		if ($useSorting) {
+			$sort = count($this->tagIds());
+		} else {
+			$sort = 0;
+		}
+		foreach ($ids as $id) {
+			$tag = $model::where('id', $id)->first();
+
+			if (!$tag) {
+				// Ignore
+				continue;
+			}
+			if (!$this->hasTag($tag)) {
+				$tagged = new Tagged(['tag_id' => $tag->id]);
+				if ($useSorting) {
+					$tagged->sorting = $sort;
+				}
+				$this->tagged()->save($tagged);
+
+				unset($this->relations['tagged']);
+				event(new TagAdded($this));
+				$sort++;
+			}
 		}
 	}
 	
 	/**
 	 * Return array of the tag ids related to the current model
 	 *
+	 * @param string	$groupName	Name of tag group
 	 * @return array
 	 */
-	public function tagIds()
+	public function tagIds($groupName = null)
 	{
-		return $this->tagged->map(function($item){
+		return $this->tagged($groupName)->get()->map(function($item){
 			return $item->tag->id;
 		})->toArray();
 	}
@@ -115,11 +174,12 @@ trait Taggable
 	/**
 	 * Return array of the tag names related to the current model
 	 *
+	 * @param string	$groupName	Name of tag group
 	 * @return array
 	 */
-	public function tagNames()
+	public function tagNames($groupName = null)
 	{
-		return $this->tagged->map(function($item){
+		return $this->tagged($groupName)->get()->map(function($item){
 			return $item->tag->name;
 		})->toArray();
 	}
@@ -127,24 +187,39 @@ trait Taggable
 	/**
 	 * Return array of the tag slugs related to the current model
 	 *
+	 * @param string	$groupName	Name of tag group
 	 * @return array
 	 */
-	public function tagSlugs()
+	public function tagSlugs($groupName = null)
 	{
-		return $this->tagged->map(function($item){
+		return $this->tagged($groupName)->get()->map(function($item){
 			return $item->tag->slug;
 		})->toArray();
+	}
+
+	/**
+	 * Checks whether the model already has this tag
+	 *
+	 * @param Tag	$tag	
+	 * @return boolean
+	 */
+	public function hasTag(Tag $tag)
+	{
+		return (bool) $this->tagged()->whereHas('tag', function ($query) use ($tag) {
+            $query->where('id', $tag->id);
+        })->count();
 	}
 	
 	/**
 	 * Remove the tag from this model
 	 *
 	 * @param $tagName string or array (or null to remove all tags)
+	 * @param string	$groupName	Name of tag group
 	 */
-	public function untag($tagNames=null)
+	public function untag($tagNames = null, $groupName = null)
 	{
 		if(is_null($tagNames)) {
-			$tagIds = $this->tagIds();
+			$tagIds = $this->tagIds($groupName);
 		} else {
 			$tagIds = static::$taggingUtility->makeTagIdArray($tagNames);
 		}
@@ -267,9 +342,10 @@ trait Taggable
 	/**
 	 * Adds a single tag
 	 *
+	 * @param string	$groupName	Name of tag group
 	 * @param $tagName string
 	 */
-	private function addTag($tagName)
+	private function addTag($tagName, $groupName = null)
 	{
 		$tagName = trim($tagName);
 		
@@ -286,6 +362,10 @@ trait Taggable
 			$tag = new $model;
 			$tag->name = $tagName;
 			$tag->slug = $tagSlug;
+			if ($groupName) {
+				// Find group id
+				$tag->tag_group_id = TagGroup::where('slug', static::$taggingUtility->slug($groupName))->first()->id;
+			}
 			$tag->suggest = false;
 			$tag->save();
 		}
