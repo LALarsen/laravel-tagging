@@ -137,6 +137,19 @@ class Tag extends Eloquent
         });
     }
 
+	/**
+	 * Get suggested tags
+	 */
+	public function scopeNotTaggedTo($query, $model)
+	{
+		return $query->whereDoesntHave('tagged', function ($query) use ($model) {
+			$className = $model->getMorphClass();
+
+			return $query->where('taggable_type', $className)
+				->where('taggable_id', $model->id);
+		});
+	}
+
     /**
      * Set the name of the tag : $tag->name = 'myname';
      *
