@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 class Tag extends Eloquent
 {
     use ConnectionTrait;
-	use \Dimsav\Translatable\Translatable;
+	use \Astrotomic\Translatable\Translatable;
 	
     public $translatedAttributes = ['name', 'slug'];
 	protected $translationForeignKey = 'tag_id';

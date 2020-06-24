@@ -11,10 +11,10 @@
 		}
 	],
 	"require": {
-		"php": ">=5.5.0",
+		"php": ">=7.2.0",
 		"illuminate/database": ">= 5.0",
 		"illuminate/support": ">= 5.0",
-		"dimsav/laravel-translatable": ">= 9.4"
+		"astrotomic/laravel-translatable": "^11.8"
 	},
 	"require-dev": {
 		"orchestra/testbench": ">= 3.0",
