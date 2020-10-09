@@ -48,16 +48,12 @@ class Tag extends Eloquent
      */
     public function save(array $options = array())
     {
-        $validator = app('validator')->make(
+    	$validator = app('validator')->make(
             array('name' => $this->name),
             array('name' => 'required|min:1')
         );
 
         if ($validator->passes()) {
-            $normalizer = config('tagging.normalizer');
-            $normalizer = $normalizer ?: [$this->taggingUtility, 'slug'];
-
-            $this->slug = call_user_func($normalizer, $this->name);
             return parent::save($options);
         } else {
             throw new \Exception('Tag Name is required');
